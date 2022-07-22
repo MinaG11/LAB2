@@ -59,7 +59,9 @@ byte spidata[2]; //spi shift register uses 16 bits, 8 for ctrl and 8 for data
 //       data - bit representation of LEDs in a given row; 1 indicates ON, 0 indicates OFF
 void spiTransfer(volatile byte row, volatile byte data);
 
-
+/** Setup function is where all pin registers used in this lab, registers for the timer4, and spiTransfer settings
+ *	  are declared.
+ */	
 void setup() {
 // 1.1 Code
 // pinMode(LED_PIN_A, OUTPUT);
@@ -72,11 +74,10 @@ void setup() {
   DDRL |= DDL0; //activating PA4, pin 49
   DDRL |= DDL1; //activating PA5, pin 48
   
-   //Setting Pin 6 (timer pin) as an output
-
+  //Setting Pin 6 (timer pin) as an output
+  DDRH |= 1<<PH3;
  
   //Setting up Timer 4 (Part 2)
-
   TCCR4A = 0;
   TCCR4B = 0;
   TCNT4 = 0;
@@ -86,7 +87,7 @@ void setup() {
   TCCR4A |= (1 << COM4A0); //Toggling on compare match
   TCCR4B |= (1 << WGM42); //CTC MODE
   TCCR4B |= (1 << CS40); //Prescalar 1
-  DDRH |= 1<<PH3;
+  
   //LED matrix setup
   DDRB |= (1 << DDB6); //DIN
   DDRB |= (1 << DDB5); //CS
@@ -100,7 +101,9 @@ void setup() {
 }
 
 
-//This method calculates the ocr4A value based on the equation given in the hardware book.
+/** This function calculates the OCRnA value for the timer4 using the given formula in the hardware sheet.
+*   It is to be used only when the prescalar value is 1. 
+*/
 void orc_calc(int freq) {
   if (freq == 0) {
     OCR4A = 0;
@@ -113,22 +116,26 @@ void orc_calc(int freq) {
 int lamb_time = 188;
 
 //Flags for tasks
-int speak_flag = 1; //
+int speak_flag = 1; 
 int led_flag = 1;
-int lamb_flag = 0; //Change this on
+int lamb_flag = 0; 
 int c_flag = 1;
 
-
+/** Loop runs the various tasks from the lab. 
+*/
 void loop() { 
   //taskA();
   taskB(); 
   //littleLamb();
   //matrix(); 
   //taskC();
+  //part_3_1();
   delay(1);
 }
 
-//This function is for part 3.1, 
+/** This function is for part 3.1 in the lab, running task A alone, task B alone, and then waiting a second.
+    Repeats when called in the loop. 
+*/
 void part_3_1() {
 	static int time;
 	time++;
@@ -142,7 +149,9 @@ void part_3_1() {
 	}
 }
 
-//This task manipulates the timers to output a square wave of various frequencies over a 4 second period
+/** This task manipulates the timers to output a square wave of frequency 400, 800, 250 and 0 for one second each
+*	over a 4 second period.
+*/
 void taskB() {
   //Part 2.3/2.4
   //I want to generate square wave on OC4A --> ABSTRACT PORT:PH3, HW PIN: 6, ADP: 7  (labeled as pin 6 on the board);
@@ -170,7 +179,8 @@ void taskB() {
 
 }
 
-//Code for 1.4, turns LEDs off and on in sequence over a 2 second period. 
+/** Code for 1.4, turns 3 LEDs off and on in sequence over a 2 second period, and then completely off. 
+*/
 void taskA() {
   static int time;   
   time++;
@@ -214,28 +224,28 @@ void taskA() {
   
 }
 
-//This is the code for little lamb. 
+/** This function plays the notes of the Mary's Little Lamb on a speaker. */
 void littleLamb(){
-   if (lamb_flag == 0) {
+   if (lamb_flag == 0) { //Shuts speaker port off when flag is off
        PORTH &= ~(PH3);
-   } else {
+   } else { //Playing the song
        PORTH |= (PH3);
        int note;
        static int counter;
        counter++;
-       note = melody[counter / lamb_time];
-       if (counter >= 11000) {
+       note = melody[counter / lamb_time]; //Playing each note of the song
+       if (counter >= 11000) { //Song plays for approximately 10 seconds, restarting the timer and counter at end of duration.
           note = 0;
           counter = 0;
-          lamb_flag = 0;
-          led_flag = 1;
+          //lamb_flag = 0; 
        }
-       OCR4A = note;
+       OCR4A = note; //Setting the OCR4A of the timer to the desired note. 
    }
 }
 
-//Task C was incomplete, but the general idea is that it should run both tasks simulateneously for 10 seconds,
-//And then at the ten second mark, the ports are turned off so they no longer run. 
+/** Task C was incomplete, but the general idea is that it should run both tasks simulateneously for 10 seconds,
+*   And then at the ten second mark, the ports are turned off so they no longer run. 
+*/
 void taskC() {
   static int time;
   time++;
@@ -256,7 +266,9 @@ void taskC() {
   delay(1);
 }
 
-//This function contains the code to display on the 8x8 LED display based on movements from the joystick. 
+/**This function contains the code to display on 
+* the 8x8 LED display based on inputs from the user controlled joystick.
+*/
 void matrix() {
   int vert = analogRead(A0) >> 7; //Converts values to 0 to 7
   int horiz = analogRead(A1) >> 7;
@@ -274,7 +286,7 @@ void matrix() {
 }
 
 
-//spiTransfer 
+/** This is the provided code for the SPI method for the LED matrix */
 void spiTransfer(volatile byte opcode, volatile byte data){
   int offset = 0; //only 1 device
   int maxbytes = 2; //16 bits per SPI command
@@ -291,7 +303,7 @@ void spiTransfer(volatile byte opcode, volatile byte data){
   digitalWrite(CS,HIGH);
 }
 
-//This is the code for part 1.1-1.2
+/** This is the code for 1.1/1.2, lighting up LEDs in sequence using arduino macro */ 
 void digWriteLEDs() {
   digitalWrite(LED_PIN_A, LOW);
   delay(d_val * 50);
