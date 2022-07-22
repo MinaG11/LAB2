@@ -17,7 +17,7 @@
 #define LED_PIN_C 48
 #define d_val 777
 
-#define TIMER4_ON_BIT PRTIM4; //Writing logic one to this shuts Timer/Counter 4 module. WHen enabled, operates like before shutdown
+#define TIMER4_ON_BIT PRTIM4; 
 #define TIMER5_ON_BIT PRTIM5;
 #define TIMER3_ON_BIT PRTIM3;
 
@@ -46,7 +46,7 @@ int melody[] = { NOTE_e, R, NOTE_d, R, NOTE_c, R, NOTE_d, R, NOTE_e, R, NOTE_e, 
                   R, NOTE_c, R, NOTE_d, R, NOTE_e, R, NOTE_e, R, NOTE_e, R, NOTE_e, R, NOTE_d, R, NOTE_d, R, NOTE_e, R, NOTE_d, R, NOTE_c, R, NOTE_c };
 
 
-// change these pins as necessary
+// Pins for SPI/LED matrix
 int DIN = 12; //PB7
 int CS =  11; //PB6
 int CLK = 10; //PB5
@@ -57,7 +57,8 @@ byte spidata[2]; //spi shift register uses 16 bits, 8 for ctrl and 8 for data
 //Input: row - row in LED matrix
 //       data - bit representation of LEDs in a given row; 1 indicates ON, 0 indicates OFF
 void spiTransfer(volatile byte row, volatile byte data);
-unsigned long prev ;
+
+
 void setup() {
 // 1.1 Code
 // pinMode(LED_PIN_A, OUTPUT);
@@ -106,8 +107,12 @@ void orc_calc(int freq) {
     OCR4A = (16000000 / 2 * freq) - 1 ;
   }
 }
+
+//Time duration for each note of little lamb song
 int lamb_time = 188;
-int speak_flag = 1; //Change this on for the single demo of this
+
+//Flags for tasks
+int speak_flag = 1; //
 int led_flag = 1;
 int lamb_flag = 0; //Change this on
 int c_flag = 1;
@@ -115,115 +120,107 @@ int c_flag = 1;
 
 void loop() { 
   
-  //matrix(); //if ( time <= 200)
+  
   //taskA();
   taskB(); 
   //littleLamb();
-
+  //matrix(); 
   //taskC();
   delay(1);
 }
 
 
-//This task manipulates the timers to output square wave
+//This task manipulates the timers to output a square wave of various frequencies over a 4 second period
 void taskB() {
   //Part 2.3/2.4
   //I want to generate square wave on OC4A --> ABSTRACT PORT:PH3, HW PIN: 6, ADP: 7  (labeled as pin 6 on the board);
   static int time;
-  if (speak_flag == 0) {
+  if (speak_flag == 0) { //If  flag is off the port is shut off. 
     PORTH &= ~(PH3);
     orc_calc(0);  
-    } else {  
-      if (time % 4000 == 0){
-  //    Serial.print("Time TASK 2:");
-  //    Serial.print(time, DEC);
-        orc_calc(400); //its running 400 HZ
+    } else {
+      PORTH |= (PH3); //Turning port back on. 
+      if (time % 4000 == 0){ //Play 400 Hz for one second
+        orc_calc(400); 
       } 
       if (time % 4000 == 1000) {
-  //    Serial.print("Time TASK 2:");
-  //    Serial.print(time, DEC);
-        orc_calc(250); //800 Hz
+        orc_calc(250); //250 Hz for one second
       } 
     
       if (time % 4000 == 2000) {
-  //    Serial.print("Time TASK 2:");
-  //    Serial.print(time, DEC);
-        orc_calc(800);
+        orc_calc(800); //800 Hz next
       }
-    
        if (time % 4000 == 3000) {
-  //    Serial.print("Time TASK 2:");
-  //    Serial.print(time, DEC);
-        orc_calc(0);
+        orc_calc(0); //Silence for one second
       } 
-      
       time++;
   }
 
 }
 
-
+//Code for 1.4, turns LEDs off and on in sequence over a 2 second period. 
 void taskA() {
-
   static int time;   
   time++;
-  Serial.begin(9600);
-  if (led_flag == 0) {
-    PORTL |= (PORTL2); //Turn on only LED 47
-    PORTL |= (PORTL2); //Turn on only LED 47
-    PORTL |= (PORTL2); //Turn on only LED 47
-    DDRL &= ~(DDL2);
-    DDRL &= ~(DDL1);
-    DDRL &= ~(DDL0);
+  if (led_flag == 0) { //If flag is off turn off the lights and the ports.
+      PORTL |= (PORTL2); 
+      PORTL |= (PORTL2); 
+      PORTL |= (PORTL2); 
+      DDRL &= ~(DDL2);
+      DDRL &= ~(DDL1);
+      DDRL &= ~(DDL0);
   } else {
-      if (time >= 0) {
+      DDRL |= (DDL2); //Turning ports back on for operation
+      DDRL |= (DDL1);
+      DDRL |= (DDL0);
+	  
+	  if (time >= 0) {
+      	PORTL &= ~(PORTL2); //Turn on only LED 47
+      	PORTL |= PORTL1;
+      	PORTL |= PORTL0;
+   	  } 
+	  
+	  if (time >= 666) {
+      	PORTL &= ~(PORTL1); 
+      	PORTL |= (PORTL0);
+      	PORTL |= PORTL2;
+      }
+     
+	  if (time >= 1334) {
+      	PORTL &= ~(PORTL0);
+      	PORTL |= PORTL2;
+      	PORTL |= PORTL1;
+      }
       
-      PORTL &= ~(PORTL2); //Turn on only LED 47
-      PORTL |= PORTL1;
-      PORTL |= PORTL0;
-    }  
-    if (time >= 666) {
-      PORTL &= ~(PORTL1); 
-      PORTL |= (PORTL0);
-      PORTL |= PORTL2;
-      
-    }
-     if (time >= 1334) {
-      PORTL &= ~(PORTL0);
-      PORTL |= PORTL2;
-      PORTL |= PORTL1;
-    }
-     if (time == 1999) {
-      time = -1;
-      led_flag = 0;
-      lamb_flag = 1;
-      speak_flag = 1;
-      Serial.print(lamb_flag, DEC);
-    }
+	  if (time == 1999) { //Reseting timer to 0 and the flags
+      	time = -1; 		  //This is currently setup to run LED task alone, and then the speaker task alone (or lamb)
+      	led_flag = 0;     //Changes depending on what part needs to be demoed. 
+      	lamb_flag = 1;
+      	speak_flag = 1;
+     }
   }
   
 }
 
-
+//This is the code for little lamb. 
 void littleLamb(){
    if (lamb_flag == 0) {
-    PORTH &= ~(PH3);
+       PORTH &= ~(PH3);
    } else {
-   int note;
-   static int counter;
-   counter++;
-   //ICR4 = note;
-   note = melody[counter / lamb_time];
-   if (counter >= 11000) {
-    note = 0;
-    counter = 0;
-    lamb_flag = 0;
-    led_flag = 1;
-   }
-   OCR4A = note;
+       PORTH |= (PH3);
+       int note;
+       static int counter;
+       counter++;
+       note = melody[counter / lamb_time];
+       if (counter >= 11000) {
+          note = 0;
+          counter = 0;
+          lamb_flag = 0;
+          led_flag = 1;
+       }
+       OCR4A = note;
    }
 }
-
 
 
 void taskC() {
@@ -244,25 +241,20 @@ void taskC() {
 
 //This function contains the code to display on the 8x8 LED display based on movements from the joystick. 
 void matrix() {
-  int vert = analogRead(A0) >> 7;
+  int vert = analogRead(A0) >> 7; //Converts values to 0 to 7
   int horiz = analogRead(A1) >> 7;
-//  int vert = 3;
-//  int horiz = 3;
 
   //HEX instead of binary
   for (int i = 0; i < 8; i++){
-    if(i == horiz){
-      spiTransfer(i, 1<<vert);
+    if(i == horiz){ //Turns on row and column of coordinate only
+      spiTransfer(i, 1<<vert); //Column value obtained by shifting
     }else{
-      // instead of using clearBoard, we turn it off
+      // Turn off all other lights. 
       spiTransfer(i, 0x00);
     }
   }
   return;
 }
-
-
-
 
 
 //spiTransfer 
