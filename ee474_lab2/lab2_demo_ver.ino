@@ -12,6 +12,7 @@
 #define PORTL0 1 << 0
 #define PORTH3 1 << 3;
 
+//For part 1.1/1.2
 #define LED_PIN_A 47 
 #define LED_PIN_B 49
 #define LED_PIN_C 48
@@ -119,8 +120,6 @@ int c_flag = 1;
 
 
 void loop() { 
-  
-  
   //taskA();
   taskB(); 
   //littleLamb();
@@ -129,6 +128,19 @@ void loop() {
   delay(1);
 }
 
+//This function is for part 3.1, 
+void part_3_1() {
+	static int time;
+	time++;
+	if (time == 0) { //Run both tasks 
+		taskA();
+		taskB();
+	} else if (time >= 6500) { //After both tasks done (it takes about 6 seconds to complete both)
+		time = 0;			   //Reset timer and flags so it can restart. 
+		led_flag = 1;
+		speak_flag = 0;
+	}
+}
 
 //This task manipulates the timers to output a square wave of various frequencies over a 4 second period
 void taskB() {
@@ -222,18 +234,23 @@ void littleLamb(){
    }
 }
 
-
+//Task C was incomplete, but the general idea is that it should run both tasks simulateneously for 10 seconds,
+//And then at the ten second mark, the ports are turned off so they no longer run. 
 void taskC() {
   static int time;
   time++;
-  if (time >= 7000) {
-    led_flag = 1;
-    speak_flag = 1;
-    taskA();
-    taskB();
-  } if (time <= 17000) {
-    led_flag = 0;
-    speak_flag = 0;
+  if (time >= 0000) { //Turning ports back on for operation
+    DDRH |= (DDH3);
+	DDRL |= (DDL2); 
+    DDRL |= (DDL1);
+    DDRL |= (DDL0);
+    taskA(); //Our code for these tasks is set up to run using flags, but what we would do is have flagless versions
+    taskB(); //that run regardless, that way the speakers and leds could run simulatenously in the loop.  
+  } if (time <= 10000) {
+  	DDRH &=  ~(DDH3); //Turning off ports and resetting the timers. 
+	DDRL &= ~(DDL2);
+    DDRL &= ~(DDL1);
+    DDRL &= ~(DDL0);  
     time = 0;
   }
   delay(1);
